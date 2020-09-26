@@ -1,33 +1,35 @@
 import { Router } from "express";
-import { startOfHour, parseISO, isEqual } from "date-fns";
+import { parseISO } from "date-fns";
 import Appointment from "../models/appointment";
-import appointmentsRepository from "../Repositories/AppointmentsRepository";
+import AppointmentsRepository from "../Repositories/AppointmentsRepository";
+import CreateAppointmentService from "../services/CreateAppointmentService";
 
 const appointmentsRouter = Router();
-const appointmentRepository = new appointmentsRepository();
+const appointmentsRepository = new AppointmentsRepository();
 
 // GET - LIST http://localhost:3333/appointments
 appointmentsRouter.get("/", (request, response) => {
-  return response.json(appointments);
+  return response.json(appointmentsRepository.all());
 });
 
 // POST - CREATE http://localhost:3333/appointments
 appointmentsRouter.post("/", (request, response) => {
-  const { provider, date } = request.body;
-  const parsedDate = startOfHour(parseISO(date));
-  const findAppointmentInSameDate = appointmentRepository.findByDate(
-    parsedDate
-  );
-  if (findAppointmentInSameDate)
-    return response
-      .status(400)
-      .json({ message: "Já existe agendamento para esta data!" });
+  try {
+    const { provider, date } = request.body;
+    const parsedDate = parseISO(date);
 
-  const appointment = new Appointment(provider, parsedDate);
+    const createAppointmentService = new CreateAppointmentService(
+      appointmentsRepository
+    );
 
-  appointments.push(appointment);
-
-  return response.json(appointment);
+    const appointment = createAppointmentService.execute({
+      provider,
+      date: parsedDate,
+    });
+    return response.json(appointment);
+  } catch (err) {
+    return response.status(400).json({ error: err.message });
+  }
 });
 
 export default appointmentsRouter;
